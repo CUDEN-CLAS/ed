@@ -4,7 +4,7 @@ This repo contains 4 modules that show how to develop custom entities in Backdro
 
 **Important:**
 1. Don't use these modules on production sites 
-2. Fully uninstall each module before installing the next one provided here. Otherwise you'll get a "white screen of death" and you site will be unreachable
+2. Fully uninstall each module before installing the next one provided here. Otherwise you'll get a "white screen of death" and your site may be be unreachable, since the modules use some of the same functions and create the same table when enabled
 3. If you create Student entities, be sure to delete them before uninstalling the module
 4. If you add fields to your Student entity, be sure to fully delete the fields and run Cron before uninstalling. There is a bug in Backdrop's core that prevents the deletion of field data when uninstalling an entity.
 
