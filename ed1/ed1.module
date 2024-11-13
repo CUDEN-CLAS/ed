@@ -12,7 +12,7 @@
  * 
  * @code
  * global $user;
- * $student = entity_create('student', array('bundle' => 'student'));
+ * $student = entity_create('student', array());
  * $student->name = 'John Rodriguez';
  * $student->created = REQUEST_TIME;
  * $student->uid = $user->uid;
@@ -125,7 +125,7 @@ function ed1_menu() {
 
   $items['student/new'] = array(
     'title' => t('Create a student'),
-    'description' => t('Create a new student of a single default bundle.'),
+    'description' => t('Create a new student.'),
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('student_form'),
     'access arguments' => array('create students'),
@@ -210,7 +210,7 @@ function student_form($form, &$form_state, Student $student = NULL) {
   // If we don't receive a student entity, create one.
   if (empty($student)) {
     global $user;
-    $student = entity_create('student', array('bundle' => 'student'));
+    $student = entity_create('student', array());
     // Initialize the uid of the author.
     $student->uid = $user->uid;
   }

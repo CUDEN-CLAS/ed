@@ -9,13 +9,6 @@ class Student extends Entity {
   public $student_id;
 
   /**
-   * The student bundle.
-   * 
-   * @var string
-   */
-  public $bundle;
-
-  /**
    * The name of the student.
    * 
    * @var string
@@ -66,12 +59,5 @@ class Student extends Entity {
       'path' => 'student/' . $this->id(),
       'options' => array(),
     );
-  }
-
-  /**
-   * Implements EntityInterface::bundle().
-   */
-  public function bundle() {
-    return $this->bundle;
   }
 }

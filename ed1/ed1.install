@@ -15,13 +15,6 @@ function ed1_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
-      'bundle' => array(
-        'description' => 'The bundle (student type) of this student.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ),
       'name' => array(
         'description' => 'The name of the student.',
         'type' => 'varchar',
