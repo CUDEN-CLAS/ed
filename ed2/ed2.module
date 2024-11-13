@@ -3,7 +3,9 @@
 /**
  * @file
  * 
- * A custom entity demo. ed2 adds bundle handling.
+ * A custom entity demo. ed2 sets two hard-coded bundles and adds bundle
+ * handling. It provides a fieldable Student entity type, and provides liaison
+ * to the Field API "Manage field" and "Manage display" UI.
  * 
  * Entry paths:
  * /student 
@@ -37,6 +39,8 @@ function ed2_entity_info() {
       'bundles' => array(
         'basic_student' => array(
           'label' => t('Basic student'),
+          // The admin key is picked up by Field API to allow the user to
+          // administer fields for the Student bundles.
           'admin' => array(
             'path' => 'admin/student-bundle/%student_bundle',
             'real path' => 'admin/student-bundle/basic_student',
