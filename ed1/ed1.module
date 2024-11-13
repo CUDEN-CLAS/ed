@@ -4,11 +4,7 @@
  * @file
  * 
  * A custom entity demo. ed1 shows basic entity info and class, and provides menu items
- * to create, edit, delete and view custom entities. .
- */
-
-/**
- * Implements hook_entity_info().
+ * to create, edit, delete and view custom entities.
  * 
  * To create a student run:
  * 
@@ -42,6 +38,12 @@
  * entity_delete_multiple('student', array([STUDENT_ID]));
  * @endcode
  * 
+ * Entry path:
+ * example.com/student
+ */
+
+/**
+ * Implements hook_entity_info().
  */
 function ed1_entity_info() {
   $info = array(
@@ -53,13 +55,8 @@ function ed1_entity_info() {
       'fieldable' => FALSE,
       'entity keys' => array(
         'id' => 'student_id',
-        'bundle' => 'bundle',
         'label' => 'name',
       ),
-      'bundle keys' => array(
-        'bundle' => 'bundle',
-      ),
-      'bundles' => array(),
     ),
   );
 
@@ -182,7 +179,6 @@ function student_view($student) {
 }
 
 /**
- * 
  * Implements hook_entity_view().
  * 
  * Used to display the property fields when a student is viewed. This can be
