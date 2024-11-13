@@ -1,0 +1,457 @@
+<?php
+
+/**
+ * @file
+ * 
+ * A custom entity demo. ed2 adds bundle handling.
+ * 
+ * Entry paths:
+ * /student 
+ * (create, edit, delete, view students)
+ * 
+ * /admin/student-bundle
+ * (list bundles and add fields)
+ * 
+ */
+
+/**
+ * Implements hook_entity_info().
+ */
+function ed2_entity_info() {
+  $info = array(
+    'student' => array(
+      'label' => t('Student'),
+      'entity class' => 'Student',
+      'controller class' => 'EntityDatabaseStorageController',
+      'base table' => 'student',
+      'fieldable' => TRUE,
+      'entity keys' => array(
+        'id' => 'student_id',
+        'bundle' => 'bundle',
+        'label' => 'name',
+      ),
+      'bundle keys' => array(
+        'bundle' => 'bundle',
+      ),
+      // We hard-code two bundles of students.
+      'bundles' => array(
+        'basic_student' => array(
+          'label' => t('Basic student'),
+          'admin' => array(
+            'path' => 'admin/student-bundle/%student_bundle',
+            'real path' => 'admin/student-bundle/basic_student',
+            'bundle argument' => 2,
+            'access arguments' => array('administer students'),
+          ),
+        ),
+        'adult_student' => array(
+          'label' => t('Adult student'),
+          'admin' => array(
+            'path' => 'admin/student-bundle/%student_bundle',
+            'real path' => 'admin/student-bundle/adult_student',
+            'bundle argument' => 2,
+            'access arguments' => array('administer students'),
+          ),
+        )
+      ),
+    ),
+  );
+
+  return $info;
+}
+
+
+/**
+ * Implements hook_autoload_info().
+ */
+function ed2_autoload_info() {
+  return array(
+    'Student' => 'ed2.entity.inc',
+  );
+}
+
+/**
+ * Implement hook_permission().
+ * 
+ * Defines basic permission for student entities.
+ */
+function ed2_permission() {
+  return array(
+    'administer students' => array(
+      'title' => t('Administer students'),
+      'description' => t('Allows users to administer student fields'),
+      'restrict access' => TRUE,
+    ),
+    'create students' => array(
+      'title' => t('Create students'),
+      'description' => t('Allows users to create students.'),
+    ),
+    'view students' => array(
+      'title' => t('View students'),
+      'description' => t('Allows users to view students.'),
+    ),
+    'edit students' => array(
+      'title' => t('Edit students'),
+      'description' => t('Allows users to edit students.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ * 
+ * Create the paths we'll use to operate on student entities.
+ */
+function ed2_menu() {
+  $items = array();
+
+  // Display a basic list of saved students.
+  // Eventually this could be done with Views (with additional code).
+  $items['student'] = array(
+    'title' => t('Students'),
+    'description' => t('Display a list of saved students'),
+    'page callback' => 'student_list',
+    'access arguments' => array('view students'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['student/new'] = array(
+    'title' => t('Create a student'),
+    'description' => t('Create a new student of a single default bundle.'),
+    'page callback' => 'student_bundle_choice',
+    'access arguments' => array('create students'),
+    'type' => MENU_LOCAL_ACTION, // This will make a "create" link appear in the list of students. 
+  );
+
+  // Create paths to create student entities for eaach bundle.
+  foreach (student_bundle_load() as $bundle_name => $info) {
+    $items['student/new/' . $bundle_name] = array(
+      'title' => 'Add student',
+      'page callback' => 'student_new',
+      'page arguments' => array(2),
+      'access arguments' => array('create students'),
+      'type' => MENU_CALLBACK,
+    );
+  }
+
+  $items['student/%student'] = array(
+    'title' => t('View a student'),
+    'description' => t('View a saved student.'),
+    'page callback' => 'student_view',
+    'page arguments' => array(1), // Send the loaded student to the callback.
+    'access arguments' => array('view students'),
+    'type' => MENU_CALLBACK, 
+  );
+
+  $items['student/%student/edit'] = array(
+    'title' => t('Edit a student'),
+    'description' => t('Edit a saved student.'),
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('student_form', 1), // Send the loaded student to the callback.
+    'access arguments' => array('edit students'),
+    'type' => MENU_CALLBACK, 
+  );
+
+  $items['student/%student/delete'] = array(
+    'title' => t('Delete a student'),
+    'description' => t('Delete a student.'),
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('student_delete_form', 1), // Send the loaded student to the callback.
+    'access arguments' => array('edit students'),
+    'type' => MENU_CALLBACK, 
+  );
+
+  $items['admin/student-bundle'] = array(
+    'title' => t('Administer student bundles'),
+    'description' => t('List all bundles of student entities'),
+    'page callback' => 'student_bundle_view',
+    'access arguments' => array('administer students'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/student-bundle/%student_bundle'] = array(
+    'title' => t('Student bundle info'),
+    'title callback' => 'student_bundle_page_title',
+    'title arguments' => array(2),
+    'description' => t('Provides info about a student bundle. This also serves to provide a base path for the Field API to place its Manage field and Manage display tabs.'),
+    'page callback' => 'student_bundle',
+    'page arguments' => array(2),
+    'access arguments' => array('administer students'),
+  );
+
+  // This item is here to create the "Info" tab.
+  $items['admin/student-bundle/%student_bundle/info'] = array(
+    'title' => t('Bundle info'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  return $items;
+}
+
+////////////////////////////////////////////////////////////////////
+// Student bundle administration
+//////////////////////////////////////////////////////////////////// 
+/**
+ * "Loads" and returns bundle information for student.
+ *
+ * Since we are hard-coding bundles, this function also returns a hard-coded 
+ * object. This can be easily extended to save student bundle information as a
+ * config files.
+ * 
+ * @param string|FALSE $bundle_id
+ *   This is the machine name of the bundle as defined in the entity_info. In our
+ *   example, this may only be 'basic_student' or 'adult_student'. FALSE returns
+ *   an array of all bundles.
+ * 
+ * @param object|array
+ *   Either a sdtClass object with bundle info (machine name and label) or an
+ *   array of such objects if $bundle_id is FALSE.
+ */
+function student_bundle_load($bundle_id = FALSE) {
+  // We retrieve the bundle information hard-coded in the student entity definition.
+  $student_entity_info = entity_get_info('student');
+  $all_bundles = array();
+  foreach ($student_entity_info['bundles'] as $machine_name => $info) {
+    $bundle_information = array();
+  
+    // Field API MUST receive a bundle property for the object (the machine name
+    // of the bundle as defined in the `bundles` subarray of the entity_info. The
+    // key for this property must match the keys defined 'bundle keys' 
+    // in hook_entity_info() ('bundle' in our case). 
+    $bundle_information['bundle'] = $machine_name;
+  
+    // Additionally, we return the label of the student bundle to display in the
+    // base student_bundle page.
+    $bundle_information['label'] = $info['label'];
+
+    // We need to return an object so that Field API cna understand the info.
+    $all_bundles[$machine_name] = (object) $bundle_information; 
+  }
+
+  return !empty($bundle_id) ? $all_bundles[$bundle_id] : $all_bundles;
+}
+
+/**
+ * Displays a simple page with all available student bundles, linked to the 
+ * student administration page.
+ */
+function student_bundle_view() {
+  $all_bundles = student_bundle_load();
+  $items = array();
+  foreach ($all_bundles as $bundle_info) {
+    $items[] = l($bundle_info->label, 'admin/student-bundle/' . $bundle_info->bundle);
+  }
+  return theme('item_list', array('items' => $items));
+}
+
+/**
+ * Title callback for student bundle administration pages.
+ * 
+ * This is used by the Field API to show the name of the bundle when we click on
+ * Manage fields or Manage displays
+ */
+function student_bundle_page_title($student_bundle) {
+  return $student_bundle->label;
+} 
+
+/**
+ * Displays a simple page with the bundle information for a specific bundle.
+ * 
+ * This page serves as a base path for Field API to display the Manage fields
+ * and Manage displays tabs for the bundle.
+ */
+function student_bundle($student_bundle) {
+  backdrop_set_title(t('Bundle information for @student_bundle', array('@student_bundle' => $student_bundle->label)));
+  $output['bundle_label'] = array(
+    '#markup' => '<div><strong>Bundle label: </strong>' . $student_bundle->label,
+  );
+  $output['bundle_machine_name'] = array(
+    '#markup' => '<div><strong>Bundle machine name: </strong>' . $student_bundle->bundle,
+  );
+  return $output;
+}
+
+////////////////////////////////////////////////////////////////////
+// Student load, view, CRUD and list functions
+////////////////////////////////////////////////////////////////////
+/**
+ * Loads a student.
+ * 
+ * This is needed so that the placeholder %student in hook_menu returns a fully
+ * loaded student.
+ */
+function student_load($student_id) {
+  return entity_load('student', $student_id);
+}
+
+/**
+ * Displays a student record.
+ */
+function student_view($student) {
+  backdrop_set_title(check_plain($student->label()));
+  $student_view = entity_view($student);
+  return $student_view;
+}
+
+/**
+ * Implements hook_entity_view().
+ * 
+ * Used to display the property fields when a student is viewed. This can be
+ * done in a number of different ways, for example, by creating a theme function
+ * for student and implementing template_preprocess_entity() to set the theme
+ * for the entity view, or by extending EntityDatabaseStorageController and
+ * overriding method buildContent().
+ * 
+ * Field API fields are attached automatically by entity_view.
+ */
+function ed2_entity_view($entity, $type, $view_mode, $langcode) {
+  if ($type == 'student') {
+    $entity->content['student_id'] = array(
+      '#markup' => '<div><strong>Student ID: </strong>' . $entity->id() . '</div>',
+    );
+    $entity->content['name'] = array(
+      '#markup' => '<div><strong>Name: </strong>' . check_plain($entity->label()) . '</div>',
+    );
+    $entity->content['uid'] = array(
+      '#markup' => '<div><strong>Author ID: </strong>' . $entity->uid  . '</div>',
+    );
+  }
+}
+
+/**
+ * Displays a list of bundles to choose from, to create a new student.
+ */
+function student_bundle_choice() {
+  $all_bundles = student_bundle_load();
+  $items = array();
+  foreach ($all_bundles as $bundle_info) {
+    $items[] = l($bundle_info->label, 'student/new/' . $bundle_info->bundle);
+  }
+  return theme('item_list', array('items' => $items));
+}
+
+/**
+ * Returns the student creation form for the specific bundle.
+ * 
+ * This function creates a new student of a given bundle, and passes it to the
+ * student_form.
+ * 
+ */
+function student_new($bundle_name) {
+  global $user;
+  $student = entity_create('student', array('bundle' => $bundle_name));
+  // Initialize the uid of the author.
+  $student->uid = $user->uid;
+  return backdrop_get_form('student_form', $student);
+}
+
+/**
+ * Form builder to edit students.
+ */
+function student_form($form, &$form_state, Student $student = NULL) {
+  // Cache the student object in $form_state for later retrieval.
+  $form_state['student'] = $student;
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Student name'),
+    '#required' => TRUE,
+    '#default_value' => !empty($student->name) ? $student->name : '',
+  );
+
+  // Attaches Field API field widgets in this bundle to the form.
+  field_attach_form('student', $student, $form, $form_state);
+
+  $form['actions'] = array(
+    '#type' => 'actions',
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Save'),
+    ),
+  );
+
+
+  return $form;
+}
+
+/**
+ * Submit handler for the student form.
+ * 
+ * Saves the student and its fields.
+ */
+function student_form_submit($form, &$form_state) {
+  // Retrieve the cached student.
+  $student = $form_state['student'];
+  $student->name = $form_state['values']['name'];
+  if (empty($student->created)) {
+    // If this this is a new student, assign a created date.
+    $student->created = REQUEST_TIME;
+  }
+
+  // Call this to attach the submitted field values to the student entity.
+  field_attach_submit('student', $student, $form, $form_state);
+
+  $student->save();
+  backdrop_set_message(t('The student has been saved'));
+  $form_state['redirect'] = 'student/' . $student->id();
+}
+
+/**
+ * Confirm form to delete a student.
+ */
+function student_delete_form($form, &$form_state, Student $student) {
+  // Send the student ID as a value field to the form.
+  $form['student_id'] = array(
+    '#type' => 'value',
+    '#value' => $student->id(),
+  );
+  $student_uri = entity_uri('student', $student);
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete student %name?', array('%name' => check_plain($student->label()))),
+    'student', // Return us to the list of students if cancel.
+    t('This action cannot be undone.'),
+    t('Delete'),
+    t('Cancel')
+  );
+  return $form;
+}
+
+function student_delete_form_submit($form, &$form_state) {
+  $student_id = $form_state['values']['student_id'];
+  $student = entity_load('student', $student_id);
+  entity_delete_multiple('student', array($student_id));
+  backdrop_set_message(t('Student %name has been deleted.', array('%name' => check_plain($student->label()))));
+  $form_state['redirect'] = 'student'; // Return us to the list of students.
+}
+
+/**
+ * Displays a basic table of existing students.
+ * 
+ * This can be replaced by a View (with additional code).
+ */
+function student_list() {
+  $students = entity_load_multiple('student');
+  $output = '';
+  $rows = array();
+  $header = array(
+    'Student ID',
+    'Name',
+    'Operations',
+  );
+  foreach ($students as $student_id => $student) {
+    $cells = array();
+    $cells[] = $student->id(); // Same as $student->student_id or $student_id in the loop.
+    $cells[] = check_plain($student->label()); // The same as $student->name.
+    $cells[] = l('view', "student/$student_id") . ' | ' . l('edit', "student/$student_id/edit") . ' | ' . l('delete', "student/$student_id/delete") ;
+    $rows[] = $cells;
+  }
+
+  // Theme the data as a table.
+  $output = theme('table', array(
+    'rows' => $rows,
+    'header' => $header,
+    'empty' => t('No students found.'),
+  ));
+  return $output;
+}

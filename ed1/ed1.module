@@ -1,0 +1,312 @@
+<?php
+
+/**
+ * @file
+ * 
+ * A custom entity demo. ed1 shows basic entity info and class, and provides menu items
+ * to create, edit, delete and view custom entities. .
+ */
+
+/**
+ * Implements hook_entity_info().
+ * 
+ * To create a student run:
+ * 
+ * @code
+ * global $user;
+ * $student = entity_create('student', array('bundle' => 'student'));
+ * $student->name = 'John Rodriguez';
+ * $student->created = REQUEST_TIME;
+ * $student->uid = $user->uid;
+ * $student->save();
+ * @endcode
+ * 
+ * To load a student, run:
+ * 
+ * @code
+ * global $user;
+ * $student = entity_load('student', [STUDENT_ID])
+ * @endcode
+ * 
+ * To update a student, run:
+ * 
+ * @code
+ * $student = entity_load('student', [STUDENT_ID]);
+ * $student->name = 'John Smith';
+ * $student->save();
+ * @endcode
+ * 
+ * To delete a student, run:
+ * 
+ * @code
+ * entity_delete_multiple('student', array([STUDENT_ID]));
+ * @endcode
+ * 
+ */
+function ed1_entity_info() {
+  $info = array(
+    'student' => array(
+      'label' => t('Student'),
+      'entity class' => 'Student',
+      'controller class' => 'EntityDatabaseStorageController',
+      'base table' => 'student',
+      'fieldable' => FALSE,
+      'entity keys' => array(
+        'id' => 'student_id',
+        'bundle' => 'bundle',
+        'label' => 'name',
+      ),
+      'bundle keys' => array(
+        'bundle' => 'bundle',
+      ),
+      'bundles' => array(),
+    ),
+  );
+
+  return $info;
+}
+
+
+/**
+ * Implements hook_autoload_info().
+ */
+function ed1_autoload_info() {
+  return array(
+    'Student' => 'ed1.entity.inc',
+  );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// The code above is enough to get a functioning entity type.
+///////////////////////////////////////////////////////////////////////////
+
+// The code below provides permissions, a list of students, and allows to
+// create, edit and delete students with forms.
+
+/**
+ * Implement hook_permission().
+ * 
+ * Defines basic permission for student entities.
+ */
+function ed1_permission() {
+  return array(
+    'create students' => array(
+      'title' => t('Create students'),
+      'description' => t('Allows users to create students.'),
+    ),
+    'view students' => array(
+      'title' => t('View students'),
+      'description' => t('Allows users to view students.'),
+    ),
+    'edit students' => array(
+      'title' => t('Edit students'),
+      'description' => t('Allows users to edit students.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ * 
+ * Create the paths we'll use to operate on student entities.
+ */
+function ed1_menu() {
+  $items = array();
+
+  // Display a basic list of saved students.
+  // Eventually this could be done with Views (with additional code).
+  $items['student'] = array(
+    'title' => t('Students'),
+    'description' => t('Display a list of saved students'),
+    'page callback' => 'student_list',
+    'access arguments' => array('view students'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['student/new'] = array(
+    'title' => t('Create a student'),
+    'description' => t('Create a new student of a single default bundle.'),
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('student_form'),
+    'access arguments' => array('create students'),
+    'type' => MENU_LOCAL_ACTION, // This will make a "create" link appear in the list of students. 
+  );
+
+  $items['student/%student'] = array(
+    'title' => t('View a student'),
+    'description' => t('View a saved student.'),
+    'page callback' => 'student_view',
+    'page arguments' => array(1), // Send the loaded student to the callback.
+    'access arguments' => array('view students'),
+    'type' => MENU_CALLBACK, 
+  );
+
+  $items['student/%student/edit'] = array(
+    'title' => t('Edit a student'),
+    'description' => t('Edit a saved student.'),
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('student_form', 1), // Send the loaded student to the callback.
+    'access arguments' => array('edit students'),
+    'type' => MENU_CALLBACK, 
+  );
+
+  $items['student/%student/delete'] = array(
+    'title' => t('Delete a student'),
+    'description' => t('Delete a student.'),
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('student_delete_form', 1), // Send the loaded student to the callback.
+    'access arguments' => array('edit students'),
+    'type' => MENU_CALLBACK, 
+  );
+
+  return $items;
+}
+
+/**
+ * Loads a student.
+ * 
+ * This is needed so that the placeholder %student in hook_menu returns a fully
+ * loaded student.
+ */
+function student_load($student_id) {
+  return entity_load('student', $student_id);
+}
+
+/**
+ * Displays a student record.
+ */
+function student_view($student) {
+  backdrop_set_title(check_plain($student->label()));
+  return entity_view($student);
+}
+
+/**
+ * 
+ * Implements hook_entity_view().
+ * 
+ * Used to display the property fields when a student is viewed. This can be
+ * done in a number of different ways, for example, by creating a theme function
+ * for student and implementing template_preprocess_entity() to set the theme
+ * for the entity view, or by extending EntityDatabaseStorageController and
+ * overriding method buildContent(). 
+ */
+function ed1_entity_view($entity, $type, $view_mode, $langcode) {
+  if ($type == 'student') {
+    $entity->content['student_id'] = array(
+      '#markup' => '<div><strong>Student ID: </strong>' . $entity->id() . '</div>',
+    );
+    $entity->content['name'] = array(
+      '#markup' => '<div><strong>Name: </strong>' . check_plain($entity->label()) . '</div>',
+    );
+    $entity->content['uid'] = array(
+      '#markup' => '<div><strong>Author ID: </strong>' . $entity->uid  . '</div>',
+    );
+  }
+}
+
+/**
+ * Form builder to create or edit students.
+ */
+function student_form($form, &$form_state, Student $student = NULL) {
+  // If we don't receive a student entity, create one.
+  if (empty($student)) {
+    global $user;
+    $student = entity_create('student', array('bundle' => 'student'));
+    // Initialize the uid of the author.
+    $student->uid = $user->uid;
+  }
+
+  // Cache the student object in $form_state for later retrieval.
+  $form_state['student'] = $student;
+
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Student name'),
+    '#required' => TRUE,
+    '#default_value' => !empty($student->name) ? $student->name : '',
+  );
+
+  $form['actions'] = array(
+    '#type' => 'actions',
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Save'),
+    ),
+  );
+  return $form;
+}
+
+/**
+ * Submit handler for the student form.
+ */
+function student_form_submit($form, &$form_state) {
+  // Retrieve the cached student.
+  $student = $form_state['student'];
+  $student->name = $form_state['values']['name'];
+  if (empty($student->created)) {
+    // If this this is a new student, assign a created date.
+    $student->created = REQUEST_TIME;
+  }
+  $student->save();
+  backdrop_set_message(t('The student has been saved'));
+  $form_state['redirect'] = 'student';
+}
+
+/**
+ * Confirm form to delete a student.
+ */
+function student_delete_form($form, &$form_state, Student $student) {
+  // Send the student ID as a value field to the form.
+  $form['student_id'] = array(
+    '#type' => 'value',
+    '#value' => $student->id(),
+  );
+  $student_uri = entity_uri('student', $student);
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete student %name?', array('%name' => check_plain($student->label()))),
+    'student', // Return us to the list of students if cancel.
+    t('This action cannot be undone.'),
+    t('Delete'),
+    t('Cancel')
+  );
+  return $form;
+}
+
+function student_delete_form_submit($form, &$form_state) {
+  $student_id = $form_state['values']['student_id'];
+  $student = entity_load('student', $student_id);
+  entity_delete_multiple('student', array($student_id));
+  backdrop_set_message(t('Student %name has been deleted.', array('%name' => check_plain($student->label()))));
+  $form_state['redirect'] = 'student'; // Return us to the list of students.
+}
+
+/**
+ * Displays a basic table of students.
+ */
+function student_list() {
+  $students = entity_load_multiple('student');
+  $output = '';
+  $rows = array();
+  $header = array(
+    'Student ID',
+    'Name',
+    'Operations',
+  );
+  foreach ($students as $student_id => $student) {
+    $cells = array();
+    $cells[] = $student->id(); // Same as $student->student_id or $student_id in the loop.
+    $cells[] = check_plain($student->label()); // The same as $student->name.
+    $cells[] = l('view', "student/$student_id") . ' | ' . l('edit', "student/$student_id/edit") . ' | ' . l('delete', "student/$student_id/delete") ;
+    $rows[] = $cells;
+  }
+
+  // Theme the data as a table.
+  $output = theme('table', array(
+    'rows' => $rows,
+    'header' => $header,
+    'empty' => t('No students found.'),
+  ));
+  return $output;
+}

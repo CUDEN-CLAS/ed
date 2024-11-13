@@ -1,0 +1,4 @@
+name = Entity Demo 3
+description = A demo of basic custom entity functionality (3). IMPORTANT: do not enable this if other entity demo modules are enabled. You must disable AND uninstall the other demos.
+backdrop = 1.x
+type = module

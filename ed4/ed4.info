@@ -1,0 +1,6 @@
+name = Entity Demo 4
+description = A demo of basic custom entity functionality (4). IMPORTANT: do not enable this if other entity demo modules are enabled. You must disable AND uninstall the other demos.
+backdrop = 1.x
+type = module
+
+dependencies[] = entity_plus
