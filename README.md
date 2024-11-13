@@ -33,7 +33,7 @@ This demo provides dynamic bundle creation capabilities. It also places the admi
 
 ## Demo 4 (ed4.module)
 This demo depends on Entity Plus. It replaces the entity controller for `EntityPlusController` to provide seamless Views integration, tokens, Entity Metadata Wrappers and more. 
-1. The list of Students is now a View. All properties defined in hook_schema are avialable as Views fields and filters
+1. The list of Students is now a View. All properties defined in hook_schema are available as Views fields and filters
 2. All functionality from ed4 is available
 
 Feel free to fork and play around. Issues and PRs are also welcome.
