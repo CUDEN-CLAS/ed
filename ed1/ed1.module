@@ -3,10 +3,12 @@
 /**
  * @file
  * 
- * A custom entity demo. ed1 shows basic entity info and class, and provides menu items
- * to create, edit, delete and view custom entities.
+ * A custom entity demo. ed1 shows basic entity info and class.
  * 
- * To create a student run:
+ * This version provides basic permissions and menu items to create, edit,
+ * delete and view student entities. 
+ * 
+ * To create a student programmatically, run:
  * 
  * @code
  * global $user;
