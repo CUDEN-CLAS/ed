@@ -1,4 +1,4 @@
-# A Backdrop CMS Custon Entity Demo
+# A Custon Entity Demo for Backdrop CMS
 
 This repo contains 4 modules that show how to develop custom entities in Backdrop. All 4 modules define a `student` entity, and get progressively more complex.
 
