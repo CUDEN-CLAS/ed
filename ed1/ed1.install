@@ -23,7 +23,7 @@ function ed1_schema() {
         'default' => '',
       ),
       'uid' => array(
-        'description' => 'ID of the creator.',
+        'description' => 'UID of the creator.',
         'type' => 'int',
         'not null' => TRUE,
       ),

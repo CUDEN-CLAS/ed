@@ -32,8 +32,9 @@ This demo provides dynamic bundle creation capabilities. It also places the admi
 3. Defines "extra fields" (aka pseudo fields) for the entity properties. This allows the admin to move those fields around or to hide them in the Manage display UI
 
 ## Demo 4 (ed4.module)
-This demo depends on Entity Plus. It replaces the entity controller for `EntityPlusController` to provide seamless Views integration, tokens, Entity Metadata Wrappers and more. 
+This demo depends on Entity Plus. It replaces the entity controller for `EntityPlusController` to provide seamless Views integration, tokens, Entity Metadata Wrappers and more. Token support is provided by enabling Entity Tokens.
 1. The list of Students is now a View. All properties defined in hook_schema are available as Views fields and filters
+3. Student entities can be used as contexts in Layouts. Also, it's possible to override the path `student/%student` to use a different layout to display student entities (e.g. by placing some of its fields in a different block) 
 2. All functionality from ed4 is available
 
 Feel free to fork and play around. Issues and PRs are also welcome.

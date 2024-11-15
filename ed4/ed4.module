@@ -4,7 +4,8 @@
  * @file
  * 
  * A custom entity demo. ed4 does all that ed3 did, but it uses Entity Plus to
- * provide Views and tokens support.
+ * provide Views and tokens support. Note: token support is provided by enabling
+ * Entity Tokens.
  * 
  * Entry paths:
  * /student 
@@ -583,3 +584,31 @@ function student_delete_form_submit($form, &$form_state) {
 //   ));
 //   return $output;
 // }
+
+/**
+ * Implements hook_layout_context_info().
+ * 
+ * This hook provides Layout integration as context. This allows the site builder
+ * to choose a student to show in the layout, and to override the student view
+ * to customize how things are shown (e.g. placing some of the student fields in
+ * a different region).
+ */
+function ed4_layout_context_info() {
+  $info['student'] = array(
+    'title' => t('Student'),
+    // Define the class which is used to handle this context.
+    'class' => 'EntityLayoutContext',
+    // Define menu paths where the node ID is a "known" context.
+    'menu paths' => array(
+      'student/%student',
+    ),
+    // Given the menu paths defined above, identify the part of the path that
+    // is needed to generate this context.
+    'path placeholder' => '%student',
+
+    // Given an argument, the callback that will be responsible for loading the
+    // main context data.
+    'load callback' => 'student_load',
+  );
+  return $info;
+}
